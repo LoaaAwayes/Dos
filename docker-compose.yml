@@ -1,0 +1,38 @@
+
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - catalog
+      - order
+    networks:
+      - app_network
+
+  catalog:
+    build: ./catalog
+    ports:
+      - "8001:8000"
+    networks:
+      - app_network
+    volumes:
+      - catalog_data:/var/lib/catalog
+
+  order:
+    build: ./order
+    ports:
+      - "8002:8000"
+    networks:
+      - app_network
+    volumes:
+      - order_data:/var/lib/order
+
+networks:  
+  app_network:
+    driver: bridge
+
+volumes:
+  catalog_data:
+  order_data:
