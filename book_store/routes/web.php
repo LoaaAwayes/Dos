@@ -20,6 +20,9 @@ $router->get('/', function () use ($router) {
 $router->post("purchase/{id}",'OrderController@purchase');
 $router->put('purchase/{id}','OrderController@purchase');
 
+$router->post('/order/{id}', 'CatalogController@order');
+$router->put('/order/{id}', 'CatalogController@order');
+
 $router->get('search/topic/{title}', 'CatalogController@searchByTitle');
 $router->get('item/{id}', 'CatalogController@getItemDetails');
 $router->put('book/{id}', 'CatalogController@updateItem');
