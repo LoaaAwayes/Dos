@@ -65,7 +65,7 @@ class OrderController extends Controller
 
 
             return response()->json([
-                'message' => 'Order placed successfully'
+                'message' => 'Order placed successfully',$book
             ], 200);
 
 

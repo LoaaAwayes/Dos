@@ -17,5 +17,9 @@ $router->get('/', function () use ($router) {
     return $router->app->version();
 });
 
-$router->post("api/purchase/{id}",'OrderController@purchase');
-$router->put('api/purchase/{id}','OrderController@purchase');
+$router->post("purchase/{id}",'OrderController@purchase');
+$router->put('purchase/{id}','OrderController@purchase');
+
+$router->get('search/topic/{title}', 'CatalogController@searchByTitle');
+$router->get('item/{id}', 'CatalogController@getItemDetails');
+$router->put('book/{id}', 'CatalogController@updateItem');
