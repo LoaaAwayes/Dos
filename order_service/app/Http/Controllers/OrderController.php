@@ -21,7 +21,7 @@ class OrderController extends Controller
             ];
 */
             // Send POST request to catalog server
-            $response = $client->post("http://localhost:8001/order/{$id}");
+            $response = $client->post("http://catalog_service:8000/order/{$id}");
             
             
 
@@ -44,7 +44,7 @@ class OrderController extends Controller
 
 
             return response()->json([
-                'message' => 'The book ordered is successfully, Happy reading',
+                //'message' => 'The book ordered is successfully, Happy reading',
                 'response' => $data
             ]);
         } catch (Exception $e) {

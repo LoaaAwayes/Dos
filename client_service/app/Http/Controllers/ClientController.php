@@ -8,8 +8,8 @@ use Exception;
 class ClientController extends Controller
 {
     protected $client;
-    protected $catalogServiceUrl = 'http://localhost:8001'; // Change this based on the actual service URL
-    protected $orderServiceUrl = 'http://localhost:8000';   // Change this based on the actual service URL
+    protected $catalogServiceUrl = 'http://catalog_service:8000'; // Change this based on the actual service URL
+    protected $orderServiceUrl = 'http://order_service:8000';   // Change this based on the actual service URL
 
 
 

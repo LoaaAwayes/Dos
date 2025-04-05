@@ -14,8 +14,6 @@ COPY . .
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Install dependencies
-RUN composer install
 
 # Expose the port the app runs on
 EXPOSE 8008

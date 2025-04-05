@@ -50,7 +50,7 @@ class CatalogController extends Controller
             
             $pdo->commit();
 
-            // additional if we want to view the quantity after selling on book  
+            // additional if we want to view the quantity after selling one book  
             $selledBook = $pdo->prepare("SELECT * FROM bookCatalog  WHERE id = ?");
             $selledBook->execute([$id]);
             
@@ -67,7 +67,7 @@ class CatalogController extends Controller
 
 
             return response()->json([
-                'message' => 'Order placed successfully',$book
+                'message' => 'Order placed successfully , Happy reading',$book
             ], 200);
 
 
