@@ -83,25 +83,25 @@ class ClientController extends Controller
 
         $this->client = new Client(['timeout' => 10]);
 
-        if (str_starts_with($cleanedRequest, 'purchase/')) {
+        if (str_starts_with($cleanedRequest, 'order/purchase/')) {
 
             return $this->purchase($cleanedRequest);
 
-        } elseif (str_starts_with($cleanedRequest, 'order/')) {
+        } elseif (str_starts_with($cleanedRequest, 'catalog/order/')) {
 
             return $this->order($cleanedRequest);
 
-        } elseif (str_starts_with($cleanedRequest, 'search/topic/')) {
+        } elseif (str_starts_with($cleanedRequest, 'catalog/search/topic/')) {
 
             return $this->search($cleanedRequest);
 
-        } elseif (str_starts_with($cleanedRequest, 'item/')) {
+        } elseif (str_starts_with($cleanedRequest, 'catalog/item/')) {
             //echo "item here";
 
             return $this->getBookInfo($cleanedRequest);
             
 
-        } elseif (str_starts_with($cleanedRequest, 'book/')) {
+        } elseif (str_starts_with($cleanedRequest, 'catalog/book/')) {
 
            return $this->updateItem($cleanedRequest);
 
