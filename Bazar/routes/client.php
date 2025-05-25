@@ -19,3 +19,5 @@ $router->get('/', function () use ($router) {
 
 
 $router->get('/{any:.*}', 'ClientController@handleFront');
+$router->put('/{any:.*}', 'ClientController@handleFront');
+$router->post('/{any:.*}', 'ClientController@handleFront');
