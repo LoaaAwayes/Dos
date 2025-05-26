@@ -18,13 +18,13 @@ $router->get('/', function () use ($router) {
 });
 
 
-    $router->post('/replicate-order', 'CatalogController@replicateOrder');
+    $router->post('/replicate-order', 'Catalog2Controller@replicateOrder');
     $router->put('/replicate-update', 'CatalogController@replicateUpdate');
 
-$router->post('/order/{id}', 'CatalogController@order');
-$router->put('/order/{id}', 'CatalogController@order');
+$router->post('/order/{id}', 'Catalog2Controller@order');
+$router->put('/order/{id}', 'Catalog2Controller@order');
 
-$router->get('search/topic/{title}', 'CatalogController@searchByTitle');
-$router->get('item/{id}', 'CatalogController@getItemDetails');
-$router->put('book/{id}', 'CatalogController@updateItem');
+$router->get('search/topic/{title}', 'Catalog2Controller@searchByTitle');
+$router->get('item/{id}', 'Catalog2Controller@getItemDetails');
+$router->put('book/{id}', 'Catalog2Controller@updateItem');
  

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\catalog\Controllers;
+namespace App\catalog2\Controllers;
 
 use Laravel\Lumen\Routing\Controller;
 use PDO;
@@ -8,12 +8,12 @@ use PDOException;
 use Exception;
 use Illuminate\Http\Request;
 
-class CatalogController extends Controller
+class Catalog2Controller extends Controller
 {
     public function order($id)
     {
         try {
-            $pdo = new PDO('sqlite:database.db');
+            $pdo = new PDO('sqlite:databaseCopy.db');
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             $pdo->beginTransaction();
