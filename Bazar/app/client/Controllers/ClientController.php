@@ -15,25 +15,18 @@ class ClientController extends Controller
     // Replica URLs - Pointing to local mock services for testing
     protected $catalogReplicas = [
         "http://localhost:8001",
-        "http://localhost:8001"
+        "http://localhost:8002"
     ];
     protected $orderReplicas = [
          "http://localhost:8003",
-         "http://localhost:8003"
+         "http://localhost:8004"
     ];
 
     // Indices for round-robin (static for persistence within a single process)
     protected static $currentCatalogIndex = 0;
     protected static $currentOrderIndex = 0;
 
-    // In-memory cache (static associative array)
-    // protected static $cache = [];
 
-    /**
-     * Get the next catalog service URL using round-robin.
-     *
-     * @return string
-     */
     protected function getNextCatalogUrl(): string
     {
         if (empty($this->catalogReplicas) || count($this->catalogReplicas) === 0 || empty($this->catalogReplicas[0])) {
@@ -47,11 +40,6 @@ class ClientController extends Controller
         return $catalogURL;
     }
 
-    /**
-     * Get the next order service URL using round-robin.
-     *
-     * @return string
-     */
     protected function getNextOrderUrl(): string
     {
         if (empty($this->orderReplicas) || empty($this->orderReplicas[0])) {
