@@ -113,6 +113,8 @@ $app->configure('app');
 //     require __DIR__.'/../routes/web.php';
 // });
 
+// Catalog Replica 1 (port 8001)
+
 $app->router->group([
     'namespace' => 'App\catalog\Controllers',
     'prefix' => 'catalog'
@@ -121,12 +123,34 @@ $app->router->group([
 });
 
 
+// Catalog Replica 2 (port 8002)
+
+$app->router->group([
+    'namespace' => 'App\catalog2\Controllers',
+    'prefix' => 'catalog2'
+], function ($router) {
+    require __DIR__.'/../routes/catalog2.php';
+});
+
+// Order Replica 1 (port 8003)
+
 $app->router->group([
     'namespace' => 'App\order\Controllers',
     'prefix' => 'order'
 ], function ($router) {
     require __DIR__.'/../routes/order.php';
 });
+
+// Order Replica 2 (port 8004)
+
+$app->router->group([
+    'namespace' => 'App\order2\Controllers',
+    'prefix' => 'order2'
+], function ($router) {
+    require __DIR__.'/../routes/order2.php';
+});
+
+// Client service (port 8000) - unchanged
 
 $app->router->group([
     'namespace' => 'App\client\Controllers',

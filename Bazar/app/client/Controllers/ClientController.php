@@ -14,12 +14,12 @@ class ClientController extends Controller
 
     // Replica URLs - Pointing to local mock services for testing
     protected $catalogReplicas = [
-        "http://localhost:8001",
-        "http://localhost:8002"
+        "http://localhost:8001/catalog",
+        "http://localhost:8002/catalog2"
     ];
     protected $orderReplicas = [
-         "http://localhost:8003",
-         "http://localhost:8004"
+         "http://localhost:8003/order",
+         "http://localhost:8004/order2"
     ];
 
     // Indices for round-robin (static for persistence within a single process)

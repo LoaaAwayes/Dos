@@ -19,7 +19,7 @@ $router->get('/', function () use ($router) {
 
 
     $router->post('/replicate-order', 'Catalog2Controller@replicateOrder');
-    $router->put('/replicate-update', 'CatalogController@replicateUpdate');
+    $router->put('/replicate-update', 'Catalog2Controller@replicateUpdate');
 
 $router->post('/order/{id}', 'Catalog2Controller@order');
 $router->put('/order/{id}', 'Catalog2Controller@order');
