@@ -63,7 +63,7 @@ class ClientController extends Controller
    protected function putInCache(string $key, $data): void
    {
     
-    Cache::put($key, $data, Carbon::now()->addMinutes(30)); 
+    Cache::put($key, $data, Carbon::now()->addMinutes(1)); 
    }
 
 
@@ -175,20 +175,20 @@ class ClientController extends Controller
         }
 
         if ($request->isMethod("GET")) {
-            if (str_starts_with($cleanedRequest, "catalog/search/")) {
+            if (str_starts_with($cleanedRequest, "search/")) {
                 return $this->search($cleanedRequest);
 
-            } elseif (str_starts_with($cleanedRequest, "catalog/item/")) {
+            } elseif (str_starts_with($cleanedRequest, "item/")) {
                 return $this->getBookInfo($cleanedRequest);
             }
         } elseif ($request->isMethod("POST")) {
-            if (str_starts_with($cleanedRequest, "order/purchase/")) {
+            if (str_starts_with($cleanedRequest, "purchase/")) {
                 return $this->purchase($cleanedRequest);
-            } elseif (str_starts_with($cleanedRequest, "catalog/order/")) {
+            } elseif (str_starts_with($cleanedRequest, "order/")) {
                 return $this->order($cleanedRequest);
             }
         } elseif ($request->isMethod("PUT")) {
-             if (str_starts_with($cleanedRequest, "catalog/book/")) {
+             if (str_starts_with($cleanedRequest, "book/")) {
                 return $this->updateItem($cleanedRequest);
             }
         }

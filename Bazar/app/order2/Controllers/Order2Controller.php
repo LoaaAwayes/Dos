@@ -24,7 +24,7 @@ class Order2Controller extends Controller
 */
             // Send POST request to catalog server
             //$response = $client->post("http://catalog_service:8000/order/{$id}");
-            $response = $client->post(":http//localhost:8002/catalog/order/{$id}");
+            $response = $client->post(":http//localhost:8002/catalog2/order/{$id}");
 
             $data = json_decode($response->getBody(), true);
 
