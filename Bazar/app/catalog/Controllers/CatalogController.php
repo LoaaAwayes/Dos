@@ -1,6 +1,6 @@
 <?php
 
-namespace App\catalog2\Controllers;
+namespace App\catalog\Controllers;
 
 use Laravel\Lumen\Routing\Controller;
 use PDO;
