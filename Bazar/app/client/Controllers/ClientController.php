@@ -36,7 +36,7 @@ class ClientController extends Controller
      */
     protected function getNextCatalogUrl(): string
     {
-        if (empty($this->catalogReplicas) || empty($this->catalogReplicas[0])) {
+        if (empty($this->catalogReplicas) || count($this->catalogReplicas) === 0 || empty($this->catalogReplicas[0])) {
             throw new \Exception("Catalog replica URLs are not configured.");
         }
 
