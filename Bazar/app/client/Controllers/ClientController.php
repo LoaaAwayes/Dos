@@ -80,7 +80,7 @@ class ClientController extends Controller
     {
         $cachedData = $this->getFromCache($requestPath);
         if ($cachedData !== null) {
-            return response()->json(["X-Cache-Status:" => "HIT",'data:' => $cachedData,] ,200);
+            return response()->json(["Cache-Status:" => "HIT",'data:' => $cachedData,] ,200);
         }
         try {
             $catalogUrl = $this->getNextCatalogUrl();
@@ -90,7 +90,7 @@ class ClientController extends Controller
 
             $this->putInCache($requestPath, $data);
 
-            return response()->json(["X-Cache-Status:" => "MISS",'data:' => $data,] ,200);
+            return response()->json(["Cache-Status:" => "MISS",'data:' => $data,] ,200);
         } catch (Exception $e) {
             return response()->json(["error" => "Failed to search catalog service due to an internal error."], 500);
         }
@@ -102,7 +102,7 @@ class ClientController extends Controller
     {
         $cachedData = $this->getFromCache($requestPath);
         if ($cachedData !== null) {
-            return response()->json( ["X-Cache-Status" => "HIT", 'data'=> $cachedData], 200);
+            return response()->json( ["Cache-Status" => "HIT", 'data'=> $cachedData], 200);
         }
     
         try{
@@ -110,7 +110,7 @@ class ClientController extends Controller
             $response = $this->client->get("{$catalogUrl}/{$requestPath}");
             $data = json_decode($response->getBody());
             $this->putInCache($requestPath, $data);
-             return response()->json( ["X-Cache-Status" => "MISS", 'data'=> $data], 200);
+             return response()->json( ["Cache-Status" => "MISS", 'data'=> $data], 200);
             } catch (Exception $e) {
             return response()->json(["error" => "Failed to get Book Info from catalog service due to an internal error."], 500);
             }
