@@ -64,7 +64,7 @@ class Catalog2Controller extends Controller
     // POST replication for orders
     protected function sendOrderReplication($id, $title, $quantity, $price)
     {
-        $replicaUrl = 'http://localhost:8002/catalog/replicate-order'; // Adjust according to your environment
+        $replicaUrl = 'http://localhost:8001/catalog/replicate-order'; // Adjust according to your environment
         
         try {
             $client = new \GuzzleHttp\Client();
@@ -88,7 +88,7 @@ class Catalog2Controller extends Controller
     // PUT replication for updates
     protected function sendUpdateReplication($id, $title, $quantity, $price)
     {
-        $replicaUrl = 'http://localhost:8002/catalog/replicate-update'; // Adjust according to your environment
+        $replicaUrl = 'http://localhost:8001/catalog/replicate-update'; // Adjust according to your environment
         
         try {
             $client = new \GuzzleHttp\Client();
