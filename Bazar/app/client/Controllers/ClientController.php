@@ -45,28 +45,6 @@ class ClientController extends Controller
     protected static $currentOrderIndex = 0;
 
 
-    // protected function getNextCatalogUrl(): string
-    // {
-    //     if (empty($this->catalogReplicas) || count($this->catalogReplicas) === 0 || empty($this->catalogReplicas[0])) {
-    //         throw new \Exception("Catalog replica URLs are not configured.");
-    //     }
-
-       
-    //     $catalogURL = $this->catalogReplicas[self::$currentCatalogIndex];
-    //     self:: $currentCatalogIndex = (self::$currentCatalogIndex + 1) % count($this->catalogReplicas);
-       
-    //     return $catalogURL;
-    // }
-
-    // protected function getNextOrderUrl(): string
-    // {
-    //     if (empty($this->orderReplicas) || empty($this->orderReplicas[0])) {
-    //         throw new \Exception("Order replica URLs are not configured.");
-    //     }
-    //     $url = $this->orderReplicas[self::$currentOrderIndex];
-    //     self::$currentOrderIndex = (self::$currentOrderIndex + 1) % count($this->orderReplicas);
-    //     return $url;
-    // }
 
     protected function getNextCatalogUrl(): string
 {
@@ -128,45 +106,6 @@ protected function getNextOrderUrl(): string
 
 
 
-    // protected function search($requestPath)
-    // {
-    //     $cachedData = $this->getFromCache($requestPath);
-    //     if ($cachedData !== null) {
-    //         return response()->json(["Cache-Status:" => "HIT",'data:' => $cachedData,] ,200);
-    //     }
-    //     try {
-    //         $catalogUrl = $this->getNextCatalogUrl();
-    //         $response = $this->client->get("{$catalogUrl}/{$requestPath}");
-
-    //         $data = json_decode($response->getBody());
-
-    //         $this->putInCache($requestPath, $data);
-
-    //         return response()->json(["Cache-Status:" => "MISS",'data:' => $data,] ,200);
-    //     } catch (Exception $e) {
-    //         return response()->json(["error" => "Failed to search catalog service due to an internal error."], 500);
-    //     }
-    // }
-
-//    Get book details by ID
-
-    // protected function getBookInfo($requestPath)
-    // {
-    //     $cachedData = $this->getFromCache($requestPath);
-    //     if ($cachedData !== null) {
-    //         return response()->json( ["Cache-Status" => "HIT", 'data'=> $cachedData], 200);
-    //     }
-    
-    //     try{
-    //         $catalogUrl = $this->getNextCatalogUrl();
-    //         $response = $this->client->get("{$catalogUrl}/{$requestPath}");
-    //         $data = json_decode($response->getBody());
-    //         $this->putInCache($requestPath, $data);
-    //          return response()->json( ["Cache-Status" => "MISS", 'data'=> $data], 200);
-    //         } catch (Exception $e) {
-    //         return response()->json(["error" => "Failed to get Book Info from catalog service due to an internal error."], 500);
-    //         }
-    // }
 
 
     protected function getBookInfo($requestPath)
@@ -200,32 +139,7 @@ protected function getNextOrderUrl(): string
     }
 }
 
-//   protected function invalidateItemCache(string $requestPath): void
-// {
-//     // Extract item ID from different path patterns
-//     $itemId = null;
-    
-//     if (preg_match('/\/(\d+)$/', $requestPath, $matches)) {
-//         $itemId = $matches[1];
-//     }
-    
-//     if ($itemId) {
-//         // Invalidate direct item cache
-//         $this->invalidateCache("item/{$itemId}");
-        
-//         // Invalidate all tracked keys that might contain this item
-//         $itemKeys = Cache::get('item_keys', []);
-//         $searchKeys = Cache::get('search_keys', []);
-        
-//         $allKeys = array_merge($itemKeys, $searchKeys);
-        
-//         foreach ($allKeys as $key) {
-//             if (str_contains($key, (string)$itemId)) {
-//                 $this->invalidateCache($key);
-//             }
-//         }
-//     }
-// }
+
 protected function invalidateItemCache(string $requestPath): void
 {
     // Extract item ID from different path patterns
@@ -316,30 +230,7 @@ protected function invalidateItemCache(string $requestPath): void
         }
     }
 
-    // protected function updateItem($requestPath)
-    // {
-    //     try {
-    //         // Invalidate cache before making the write operation
-    //         $this->invalidateItemCache($requestPath);
-            
-    //         $catalogUrl = $this->getNextCatalogUrl();
-    //         $payload = request()->json()->all();
-    //         $response = $this->client->put("{$catalogUrl}/{$requestPath}", [
-    //             'headers' => [
-    //                 'Accept' => 'application/json',
-    //                 'Content-Type' => 'application/json'
-    //             ],
-    //             "json" => $payload 
-    //         ]);
-            
-    //         return response()->json(json_decode($response->getBody()), 200);
-    //     } catch (Exception $e) {
-    //         return response()->json([
-    //             "error" => "Failed to update item in catalog service due to an internal error.",
-    //             "details" => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
+  
 
 
     protected function updateItem($requestPath)
@@ -409,50 +300,6 @@ protected function invalidateItemCache(string $requestPath): void
             ], 500);
         }
     }
-
-    // protected function purchase($requestPath)
-    // {
-    //     try {
-    //         $orderUrl = $this->getNextOrderUrl();
-    //         $response = $this->client->post("{$orderUrl}/{$requestPath}");
-    //         return response()->json(json_decode($response->getBody()), 200);
-    //     } catch (Exception $e) {
-    //         return response()->json(["error" => "Failed to process purchase with order service due to an internal error."
-    //     ,'error' => $e->getMessage()], 500);
-    //     }
-    // }
-
-    // protected function order($requestPath)
-    // {
-    //     try {
-    //         $catalogUrl = $this->getNextCatalogUrl();
-    //         $response = $this->client->post("{$catalogUrl}/{$requestPath}");
-    //         return response()->json(json_decode($response->getBody()), 200);
-    //     } catch (Exception $e) {
-    //         return response()->json(["error" => "Failed to process order/update with catalog service due to an internal error."], 500);
-    //     }
-    // }
-
-    // protected function updateItem($requestPath)
-    // {
-    //     try {
-    //         $catalogUrl = $this->getNextCatalogUrl();
-    //         $payload = request()->json()->all();
-    //         $response = $this->client->put("{$catalogUrl}/{$requestPath}", [
-    //             "json" => $payload 
-    //         ]);
-    //         if ($response){
-            
-    //             $this->invalidateCache($requestPath);
-    //             return response()->json(json_decode($response->getBody()), 200);
-
-    //         }
-    //         return response()->json(json_decode($response->getBody()), 200);
-    //     } catch (Exception $e) {
-    //         return response()->json(["error" => "Failed to update item in catalog service due to an internal error."
-    //         ,'error' => $e->getMessage()], 500);
-    //     }
-    // }
 
 
 
