@@ -13,13 +13,15 @@ class Catalog2Controller extends Controller
     public function order($id)
     {
         try {
-            $dbPath = __DIR__ . '/../../../public/database.db'; // 
 
             $pdo = new PDO('sqlite:databaseCopy.db');
-            $pdo2 = new PDO("sqlite:$dbPath");
+            $pdo2 = new PDO("sqlite:database.db");
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo2->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
 
             $pdo->beginTransaction();
+            $pdo2->beginTransaction();
 
             $query = $pdo->prepare("SELECT numItemsInStock, bookTitle, bookCost FROM bookCatalog WHERE id = ?");
             $query->execute([$id]);
@@ -49,8 +51,13 @@ class Catalog2Controller extends Controller
             $selledBook->execute([$id]);
             $book = $selledBook->fetch(PDO::FETCH_ASSOC);
 
-             $updateStock = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
-            $updateStock->execute([$id, $book['numItemsInStock']]);
+             $updateStock2 = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
+            $updateStock2->execute([ $book['numItemsInStock'], $id]);
+
+             $selledBook2 = $pdo2->prepare("SELECT * FROM bookCatalog WHERE id = ?");
+            $selledBook2->execute([$id]);
+            $book2 = $selledBook2->fetch(PDO::FETCH_ASSOC);
+             $pdo2->commit();
 
             // Only replicate if the request doesn't come from another replica
             if (!request()->header('Replicated')) {
@@ -60,6 +67,7 @@ class Catalog2Controller extends Controller
             return response()->json([
                 'message' => 'Order placed successfully. Happy reading!',
                 'book' => $book,
+                'book2'=> $book2,
                 'replicaMsg' => $replicaSent
             ], 200);
 

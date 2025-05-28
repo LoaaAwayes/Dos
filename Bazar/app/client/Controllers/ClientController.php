@@ -113,7 +113,7 @@ protected function getNextOrderUrl(): string
    protected function putInCache(string $key, $data): void
    {
     
-    Cache::add($key, $data, Carbon::now()->addMinutes(1)); 
+    Cache::put($key, $data, Carbon::now()->addMinutes(1)); 
    }
 
 
@@ -200,29 +200,72 @@ protected function getNextOrderUrl(): string
     }
 }
 
-  protected function invalidateItemCache(string $requestPath): void
+//   protected function invalidateItemCache(string $requestPath): void
+// {
+//     // Extract item ID from different path patterns
+//     $itemId = null;
+    
+//     if (preg_match('/\/(\d+)$/', $requestPath, $matches)) {
+//         $itemId = $matches[1];
+//     }
+    
+//     if ($itemId) {
+//         // Invalidate direct item cache
+//         $this->invalidateCache("item/{$itemId}");
+        
+//         // Invalidate all tracked keys that might contain this item
+//         $itemKeys = Cache::get('item_keys', []);
+//         $searchKeys = Cache::get('search_keys', []);
+        
+//         $allKeys = array_merge($itemKeys, $searchKeys);
+        
+//         foreach ($allKeys as $key) {
+//             if (str_contains($key, (string)$itemId)) {
+//                 $this->invalidateCache($key);
+//             }
+//         }
+//     }
+// }
+protected function invalidateItemCache(string $requestPath): void
 {
     // Extract item ID from different path patterns
     $itemId = null;
     
-    if (preg_match('/\/(\d+)$/', $requestPath, $matches)) {
+    // Match patterns like /book/3, /item/3, or just /3
+    if (preg_match('/(?:book|item)\/(\d+)$/', $requestPath, $matches) || 
+        preg_match('/\/(\d+)(?:\?|$)/', $requestPath, $matches)) {
         $itemId = $matches[1];
     }
     
     if ($itemId) {
-        // Invalidate direct item cache
+        // Invalidate all direct item cache patterns
         $this->invalidateCache("item/{$itemId}");
+        $this->invalidateCache("book/{$itemId}");
+        $this->invalidateCache($requestPath); // Invalidate the exact request path
         
-        // Invalidate all tracked keys that might contain this item
-        $itemKeys = Cache::get('item_keys', []);
+        // Invalidate all search-related caches that might contain this item
         $searchKeys = Cache::get('search_keys', []);
-        
-        $allKeys = array_merge($itemKeys, $searchKeys);
-        
-        foreach ($allKeys as $key) {
-            if (str_contains($key, (string)$itemId)) {
+        foreach ($searchKeys as $key) {
+            // Invalidate all search results that might include this book
+            if (str_contains($key, 'search/')) {
                 $this->invalidateCache($key);
             }
+        }
+        
+        // Also invalidate any topic-based searches that might include this book
+        $topicKeys = array_filter($searchKeys, function($key) {
+            return str_contains($key, 'topic/');
+        });
+        foreach ($topicKeys as $key) {
+            $this->invalidateCache($key);
+        }
+    }
+    
+    // Additionally, invalidate all cached responses that might contain this book's data
+    $itemKeys = Cache::get('item_keys', []);
+    foreach ($itemKeys as $key) {
+        if (str_contains($key, (string)$itemId)) {
+            $this->invalidateCache($key);
         }
     }
 }
@@ -273,31 +316,68 @@ protected function getNextOrderUrl(): string
         }
     }
 
-    protected function updateItem($requestPath)
-    {
-        try {
-            // Invalidate cache before making the write operation
-            $this->invalidateItemCache($requestPath);
+    // protected function updateItem($requestPath)
+    // {
+    //     try {
+    //         // Invalidate cache before making the write operation
+    //         $this->invalidateItemCache($requestPath);
             
-            $catalogUrl = $this->getNextCatalogUrl();
-            $payload = request()->json()->all();
-            $response = $this->client->put("{$catalogUrl}/{$requestPath}", [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json'
-                ],
-                "json" => $payload 
-            ]);
+    //         $catalogUrl = $this->getNextCatalogUrl();
+    //         $payload = request()->json()->all();
+    //         $response = $this->client->put("{$catalogUrl}/{$requestPath}", [
+    //             'headers' => [
+    //                 'Accept' => 'application/json',
+    //                 'Content-Type' => 'application/json'
+    //             ],
+    //             "json" => $payload 
+    //         ]);
             
-            return response()->json(json_decode($response->getBody()), 200);
-        } catch (Exception $e) {
-            return response()->json([
-                "error" => "Failed to update item in catalog service due to an internal error.",
-                "details" => $e->getMessage()
-            ], 500);
-        }
-    }
+    //         return response()->json(json_decode($response->getBody()), 200);
+    //     } catch (Exception $e) {
+    //         return response()->json([
+    //             "error" => "Failed to update item in catalog service due to an internal error.",
+    //             "details" => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
+
+    protected function updateItem($requestPath)
+{
+    try {
+        // First invalidate all relevant cache entries
+        $this->invalidateItemCache($requestPath);
+        
+        $catalogUrl = $this->getNextCatalogUrl();
+        $payload = request()->json()->all();
+        $response = $this->client->put("{$catalogUrl}/{$requestPath}", [
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
+            ],
+            "json" => $payload 
+        ]);
+        
+        // Get the updated book data
+        $updatedData = json_decode($response->getBody(), true);
+        
+        // If we have an ID from the response, invalidate again with more context
+        if (isset($updatedData['id'])) {
+            $this->invalidateItemCache("item/{$updatedData['id']}");
+            $this->invalidateItemCache("book/{$updatedData['id']}");
+        }
+        
+        // Also invalidate the exact request path again
+        $this->invalidateItemCache($requestPath);
+        
+        return response()->json($updatedData, 200);
+    } catch (Exception $e) {
+        return response()->json([
+            "error" => "Failed to update item in catalog service due to an internal error.",
+            "details" => $e->getMessage()
+        ], 500);
+    }
+}
   //  Modified search method to track search keys
 
     protected function search($requestPath)

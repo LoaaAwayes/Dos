@@ -12,66 +12,76 @@ class CatalogController extends Controller
 {
 
 
-    public function order($id)
-    {
-        try {
+public function order($id)
+{
+    try {
+        $pdo = new PDO('sqlite:database.db');
+        $pdo2 = new PDO("sqlite:databaseCopy.db");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo2->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            $dbPath = __DIR__ . '/../../../public/databaseCopy.db'; // 
-            $pdo = new PDO('sqlite:database.db');
-            $pdo2 = new PDO("sqlite:$dbPath"); 
+        $pdo->beginTransaction();
+        $pdo2->beginTransaction();
 
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        // Get current stock from primary database
+        $query = $pdo->prepare("SELECT numItemsInStock, bookTitle, bookCost FROM bookCatalog WHERE id = ?");
+        $query->execute([$id]);
+        $book = $query->fetch(PDO::FETCH_ASSOC);
 
-            //$pdo->beginTransaction();
-
-            $query = $pdo->prepare("SELECT numItemsInStock, bookTitle, bookCost FROM bookCatalog WHERE id = ?");
-            $query->execute([$id]);
-            $book = $query->fetch(PDO::FETCH_ASSOC);
-
-            if (!$book) {
-                throw new Exception("Error: Item ID $id does not exist.");
-            }
-
-            if ($book['numItemsInStock'] <= 0) {
-                throw new Exception("Purchase failed: Item ID $id is out of stock.");
-            }
-
-            $insertOrder = $pdo->prepare("INSERT INTO orders (bookId, quantity) VALUES (?, 1)");
-            $insertOrder->execute([$id]);
-
-            $updateStock = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = numItemsInStock - 1 WHERE id = ?");
-            $updateStock->execute([$id]);
-
-            //$pdo->commit();
-
-            $selledBook = $pdo->prepare("SELECT * FROM bookCatalog WHERE id = ?");
-            $selledBook->execute([$id]);
-            $book = $selledBook->fetch(PDO::FETCH_ASSOC);
-
-            $updateStock = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
-            $updateStock->execute([$id, $book['numItemsInStock']]);
-
-            
-
-            // Only replicate if the request doesn't come from another replica
-            if (!request()->header('Replicated')) {
-                $replicaSent = $this->sendOrderReplication($id, $book['bookTitle'], $book['numItemsInStock'], $book['bookCost']);
-            }
-
-            return response()->json([
-                'message' => 'Order placed successfully. Happy reading!',
-                'book' => $book,
-                'replica msg:'=>$replicaSent
-            ], 200);
-
-        } catch (PDOException $e) {
-           // if ($pdo->inTransaction()) $pdo->rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
-        } catch (Exception $e) {
-            //if ($pdo->inTransaction()) $pdo->rollBack();
-            return response()->json(['error' => $e->getMessage()], 400);
+        if (!$book) {
+            throw new Exception("Error: Item ID $id does not exist.");
         }
+
+        if ($book['numItemsInStock'] <= 0) {
+            throw new Exception("Purchase failed: Item ID $id is out of stock.");
+        }
+
+        // Process order in primary database
+        $insertOrder = $pdo->prepare("INSERT INTO orders (bookId, quantity) VALUES (?, 1)");
+        $insertOrder->execute([$id]);
+
+        $updateStock = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = numItemsInStock - 1 WHERE id = ?");
+        $updateStock->execute([$id]);
+
+        // Get updated stock from primary database
+        $selledBook = $pdo->prepare("SELECT * FROM bookCatalog WHERE id = ?");
+        $selledBook->execute([$id]);
+        $book = $selledBook->fetch(PDO::FETCH_ASSOC);
+
+        // Update secondary database with the new stock value
+        $updateStock2 = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
+        $updateStock2->execute([$book['numItemsInStock'], $id]); 
+
+        // Verify update in secondary database
+        $selledBook2 = $pdo2->prepare("SELECT * FROM bookCatalog WHERE id = ?");
+        $selledBook2->execute([$id]);
+        $book2 = $selledBook2->fetch(PDO::FETCH_ASSOC);
+
+        $pdo->commit();
+        $pdo2->commit();
+
+        // Only replicate if the request doesn't come from another replica
+        if (!request()->header('Replicated')) {
+            $replicaSent = $this->sendOrderReplication($id, $book['bookTitle'], $book['numItemsInStock'], $book['bookCost']);
+        }
+
+        return response()->json([
+            'message' => 'Order placed successfully. Happy reading!',
+            'book' => $book,
+            'book2' => $book2,
+            'replicaMsg' => $replicaSent ?? 'No replication needed'
+        ], 200);
+
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        if (isset($pdo2) && $pdo2->inTransaction()) $pdo2->rollBack();
+        return response()->json(['error' => 'Database error: ' . $e->getMessage()], 500);
+    } catch (Exception $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        if (isset($pdo2) && $pdo2->inTransaction()) $pdo2->rollBack();
+        return response()->json(['error' => $e->getMessage()], 400);
     }
+}
 
     // POST replication for orders
     protected function sendOrderReplication($id, $title, $quantity, $price)
