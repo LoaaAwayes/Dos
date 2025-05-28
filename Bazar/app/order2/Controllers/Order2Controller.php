@@ -4,7 +4,7 @@ namespace App\order2\Controllers;
 
 use Laravel\Lumen\Routing\Controller;
 
-use PDO;  
+
 //use PDOException;  
 use Exception;
 
@@ -12,9 +12,12 @@ use GuzzleHttp\Client;
 
 class Order2Controller extends Controller
 {
+     protected $client;
     public function purchase($id)
     {
         try {
+
+
             $client = new Client(['timeout' => 20]);
 
  /*           $order = [
@@ -23,10 +26,21 @@ class Order2Controller extends Controller
             ];
 */
             // Send POST request to catalog server
-            //$response = $client->post("http://catalog_service:8000/order/{$id}");
-            $response = $client->post(":http//localhost:8002/catalog2/order/{$id}");
+           // $response = $client->post("http://catalog_service:8000/order/{$id}");
+            $response = $client->post("http://localhost:9001/catalog2/order/{$id}");
+
+
+            
 
             $data = json_decode($response->getBody(), true);
+
+
+
+            
+
+
+
+
 
            /* $pdo = new PDO('sqlite:database.db');
             $selledBook = $pdo->prepare("SELECT * FROM bookCatalog  WHERE id = ?");

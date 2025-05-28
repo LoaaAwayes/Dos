@@ -11,11 +11,15 @@ use Exception;
 use GuzzleHttp\Client;
 
 class OrderController extends Controller
-{
+
+{  
+    protected $client;
+
     public function purchase($id)
     {
         try {
-            $client = new Client(['timeout' => 20]);
+
+            $client = new Client(['timeout' => 20]); 
 
  /*           $order = [
                 'book_id' => $id,
@@ -24,12 +28,13 @@ class OrderController extends Controller
 */
             // Send POST request to catalog server
            // $response = $client->post("http://catalog_service:8000/order/{$id}");
-            $response = $client->post(":http//localhost:8001/catalog/order/{$id}");
+            $response = $client->post("http://localhost:9001/catalog/order/{$id}");
 
 
             
 
             $data = json_decode($response->getBody(), true);
+
 
            /* $pdo = new PDO('sqlite:database.db');
             $selledBook = $pdo->prepare("SELECT * FROM bookCatalog  WHERE id = ?");
