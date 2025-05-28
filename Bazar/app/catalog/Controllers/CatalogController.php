@@ -10,11 +10,17 @@ use Illuminate\Http\Request;
 
 class CatalogController extends Controller
 {
+
+
     public function order($id)
     {
         try {
+
+            $dbPath = __DIR__ . '/../../../public/databaseCopy.db'; // 
             $pdo = new PDO('sqlite:database.db');
-            //$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo2 = new PDO("sqlite:$dbPath"); 
+
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             //$pdo->beginTransaction();
 
@@ -42,6 +48,11 @@ class CatalogController extends Controller
             $selledBook->execute([$id]);
             $book = $selledBook->fetch(PDO::FETCH_ASSOC);
 
+            $updateStock = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
+            $updateStock->execute([$id, $book['numItemsInStock']]);
+
+            
+
             // Only replicate if the request doesn't come from another replica
             if (!request()->header('Replicated')) {
                 $replicaSent = $this->sendOrderReplication($id, $book['bookTitle'], $book['numItemsInStock'], $book['bookCost']);
@@ -50,7 +61,7 @@ class CatalogController extends Controller
             return response()->json([
                 'message' => 'Order placed successfully. Happy reading!',
                 'book' => $book,
-                'replicated:' => $replicaSent 
+                'replica msg:'=>$replicaSent
             ], 200);
 
         } catch (PDOException $e) {
@@ -65,12 +76,13 @@ class CatalogController extends Controller
     // POST replication for orders
     protected function sendOrderReplication($id, $title, $quantity, $price)
     {
-        $replicaUrl = 'http://localhost:9001/catalog2/replicate-order'; // Adjust according to your environment
+        // return  response()->json('msg reached here sendOrderReplication');
+        $replicaUrl = 'http://localhost:9002/catalog2/replicate-order'; // Adjust according to your environment
         
         try {
             $client = new \GuzzleHttp\Client();
-            $client->post($replicaUrl, [
-                'json' => [
+            $response = $client->post($replicaUrl, [
+                 [
                     'id' => $id,
                     'title' => $title,
                     'quantity' => $quantity,
@@ -81,6 +93,14 @@ class CatalogController extends Controller
                 ],
             'timeout' => 5 
             ]);
+                return  response()->json(
+                [
+                    'id' => $id,
+                    'title' => $title,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    'response' => $response
+                ], 200);
         } catch (\Exception $e) {
             // Log the error silently
             error_log("Order replication failed: " . $e->getMessage());
@@ -90,11 +110,11 @@ class CatalogController extends Controller
     // PUT replication for updates
     protected function sendUpdateReplication($id, $title, $quantity, $price)
     {
-        $replicaUrl = 'http://localhost:9001/catalog2/replicate-update'; // Adjust according to your environment
+        $replicaUrl = 'http://localhost:9002/catalog2/replicate-update'; // Adjust according to your environment
         
         try {
             $client = new \GuzzleHttp\Client();
-            $client->put($replicaUrl, [
+            $response = $client->put($replicaUrl, [
                 'json' => [
                     'id' => $id,
                     'title' => $title,
@@ -106,6 +126,16 @@ class CatalogController extends Controller
                 ],
             'timeout' => 5 
             ]);
+
+               return  response()->json(
+                [
+                    'id' => $id,
+                    'title' => $title,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    
+                     'response' => json_decode($response->getBody(), true)
+                ], 200);
         } catch (\Exception $e) {
             // Log the error silently
             error_log("Update replication failed: " . $e->getMessage());
@@ -114,6 +144,9 @@ class CatalogController extends Controller
 
     public function replicateOrder(Request $request)
     {
+
+         return response()->json(['message' => 'entered the functions replicateOrder'], 200);
+
         // Check if this is a replication request to prevent infinite loops
         if ($request->header('Replicated') !== 'true') {
             return response()->json(['message' => 'Already replicated, skip forwarding'], 200);
@@ -220,10 +253,10 @@ class CatalogController extends Controller
 
             // Only replicate if the request doesn't come from another replica
             if (!request()->header('Replicated')) {
-                 $replicaSent = $this->sendUpdateReplication($id, $title, $quantity, $price);
+                $replicaSent = $this->sendUpdateReplication($id, $title, $quantity, $price);
             }
 
-            return response()->json(['message' => 'Item updated successfully.', 'updated_item' => $updatedItem,'replicated:' => $replicaSent ], 200);
+            return response()->json(['message' => 'Item updated successfully.', 'updated_item' => $updatedItem ,'replica msg:'=>$replicaSent], 200);
 
         } catch (PDOException $e) {
             return response()->json(['error' => $e->getMessage()], 500);

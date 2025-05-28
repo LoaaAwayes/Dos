@@ -17,9 +17,10 @@ class OrderController extends Controller
 
     public function purchase($id)
     {
-        try {
 
-            $client = new Client(['timeout' => 20]); 
+
+        try {
+            $client = new Client(['timeout' => 600]);
 
  /*           $order = [
                 'book_id' => $id,

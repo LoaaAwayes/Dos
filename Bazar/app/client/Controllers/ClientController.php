@@ -31,20 +31,44 @@ class ClientController extends Controller
     // Replica URLs - Pointing to local mock services for testing
     protected $catalogReplicas = [
         "http://localhost:9001/catalog",
-        "http://localhost:9001/catalog2"
+        "http://localhost:9002/catalog2"
     ];
     protected $orderReplicas = [
-         "http://localhost:9002/order",
-         "http://localhost:9002/order2"
+         "http://localhost:9003/order",
+         "http://localhost:9004/order2"
     ];
     protected $catalogUrl;
 
     protected $orderUrl;
     // Indices for round-robin (static for persistence within a single process)
-    protected static $currentCatalogIndex = 1;
-    protected static $currentOrderIndex = 1;
+    protected static $currentCatalogIndex = 0;
+    protected static $currentOrderIndex = 0;
 
-protected function getNextCatalogUrl(): string
+
+    // protected function getNextCatalogUrl(): string
+    // {
+    //     if (empty($this->catalogReplicas) || count($this->catalogReplicas) === 0 || empty($this->catalogReplicas[0])) {
+    //         throw new \Exception("Catalog replica URLs are not configured.");
+    //     }
+
+       
+    //     $catalogURL = $this->catalogReplicas[self::$currentCatalogIndex];
+    //     self:: $currentCatalogIndex = (self::$currentCatalogIndex + 1) % count($this->catalogReplicas);
+       
+    //     return $catalogURL;
+    // }
+
+    // protected function getNextOrderUrl(): string
+    // {
+    //     if (empty($this->orderReplicas) || empty($this->orderReplicas[0])) {
+    //         throw new \Exception("Order replica URLs are not configured.");
+    //     }
+    //     $url = $this->orderReplicas[self::$currentOrderIndex];
+    //     self::$currentOrderIndex = (self::$currentOrderIndex + 1) % count($this->orderReplicas);
+    //     return $url;
+    // }
+
+    protected function getNextCatalogUrl(): string
 {
     if (empty($this->catalogReplicas)) {
         throw new \Exception("Catalog replica URLs are not configured.");
@@ -54,6 +78,7 @@ protected function getNextCatalogUrl(): string
     $url = $this->catalogReplicas[$currentIndex];
     
     $newIndex = ($currentIndex + 1) % count($this->catalogReplicas);
+     Cache::forget('current_catalog_index');
     Cache::put('current_catalog_index', $newIndex, Carbon::now()->addMinutes(10));
     
     return $url;
@@ -69,6 +94,7 @@ protected function getNextOrderUrl(): string
     $url = $this->orderReplicas[$currentIndex];
     
     $newIndex = ($currentIndex + 1) % count($this->orderReplicas);
+    Cache::forget('current_order_index');
     Cache::put('current_order_index', $newIndex, Carbon::now()->addMinutes(10));
     
     return $url;

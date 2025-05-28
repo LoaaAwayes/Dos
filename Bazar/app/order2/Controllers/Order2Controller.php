@@ -15,10 +15,10 @@ class Order2Controller extends Controller
      protected $client;
     public function purchase($id)
     {
+
+      // return  response()->json('msg reached here order2 purchase');
         try {
-
-
-            $client = new Client(['timeout' => 20]);
+            $client = new Client(['timeout' => 600]);
 
  /*           $order = [
                 'book_id' => $id,
@@ -26,11 +26,8 @@ class Order2Controller extends Controller
             ];
 */
             // Send POST request to catalog server
-           // $response = $client->post("http://catalog_service:8000/order/{$id}");
-            $response = $client->post("http://localhost:9001/catalog2/order/{$id}");
-
-
-            
+            //$response = $client->post("http://catalog_service:8000/order/{$id}");
+            $response = $client->post("http://localhost:9002/catalog2/order/{$id}");
 
             $data = json_decode($response->getBody(), true);
 
