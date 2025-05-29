@@ -106,7 +106,7 @@ protected function getNextOrderUrl(): string
 
 
 
-
+/** creates requeste to catalog server to get books info */
 
     protected function getBookInfo($requestPath)
 {
@@ -139,7 +139,7 @@ protected function getNextOrderUrl(): string
     }
 }
 
-
+/** here to invalidate item from cache recognizing all possible formats */
 protected function invalidateItemCache(string $requestPath): void
 {
     // Extract item ID from different path patterns
@@ -183,6 +183,7 @@ protected function invalidateItemCache(string $requestPath): void
         }
     }
 }
+/** creates requeste to order server to buy a book  */
 
     protected function purchase($requestPath)
     {
@@ -206,6 +207,7 @@ protected function invalidateItemCache(string $requestPath): void
             ], 500);
         }
     }
+/** creates requeste to catalog server to buy a book  */
 
     protected function order($requestPath)
     {
@@ -232,6 +234,7 @@ protected function invalidateItemCache(string $requestPath): void
 
   
 
+/** creates requeste to catalog server to update a book  */
 
     protected function updateItem($requestPath)
 {
@@ -269,7 +272,9 @@ protected function invalidateItemCache(string $requestPath): void
         ], 500);
     }
 }
-  //  Modified search method to track search keys
+  //   search method 
+  /** creates requeste to catalog server to search for a book  */
+
 
     protected function search($requestPath)
     {
@@ -301,6 +306,7 @@ protected function invalidateItemCache(string $requestPath): void
         }
     }
 
+/** main cliant method that handles requests types  */
 
 
     public function handleFront(Request $request)

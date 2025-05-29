@@ -16,12 +16,12 @@ public function order($id)
 {
     try {
         $pdo = new PDO('sqlite:database.db');
-        $pdo2 = new PDO("sqlite:databaseCopy.db");
+        //$pdo2 = new PDO("sqlite:databaseCopy.db");
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo2->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        //$pdo2->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         $pdo->beginTransaction();
-        $pdo2->beginTransaction();
+        //$pdo2->beginTransaction();
 
         // Get current stock from primary database
         $query = $pdo->prepare("SELECT numItemsInStock, bookTitle, bookCost FROM bookCatalog WHERE id = ?");
@@ -49,16 +49,16 @@ public function order($id)
         $book = $selledBook->fetch(PDO::FETCH_ASSOC);
 
         // Update secondary database with the new stock value
-        $updateStock2 = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
-        $updateStock2->execute([$book['numItemsInStock'], $id]); 
+        //$updateStock2 = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
+        //$updateStock2->execute([$book['numItemsInStock'], $id]); 
 
         // Verify update in secondary database
-        $selledBook2 = $pdo2->prepare("SELECT * FROM bookCatalog WHERE id = ?");
+        /*$selledBook2 = $pdo2->prepare("SELECT * FROM bookCatalog WHERE id = ?");
         $selledBook2->execute([$id]);
-        $book2 = $selledBook2->fetch(PDO::FETCH_ASSOC);
+        $book2 = $selledBook2->fetch(PDO::FETCH_ASSOC);*/
 
         $pdo->commit();
-        $pdo2->commit();
+        //$pdo2->commit();
 
         // Only replicate if the request doesn't come from another replica
         if (!request()->header('Replicated')) {
@@ -68,8 +68,8 @@ public function order($id)
         return response()->json([
             'message' => 'Order placed successfully. Happy reading!',
             'book' => $book,
-            'book2' => $book2,
-            'replicaMsg' => $replicaSent ?? 'No replication needed'
+            //'book2' => $book2,
+            'replicaMsg' => $replicaSent 
         ], 200);
 
     } catch (PDOException $e) {
@@ -86,41 +86,7 @@ public function order($id)
     // POST replication for orders
     protected function sendOrderReplication($id, $title, $quantity, $price)
     {
-        // return  response()->json('msg reached here sendOrderReplication');
-        $replicaUrl = 'http://localhost:9002/catalog2/replicate-order'; // Adjust according to your environment
-        
-        try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->post($replicaUrl, [
-                 [
-                    'id' => $id,
-                    'title' => $title,
-                    'quantity' => $quantity,
-                    'price' => $price
-                ],
-                'headers' => [
-                    'Replicated' => 'true' // Mark this as a replication request
-                ],
-            'timeout' => 5 
-            ]);
-                return  response()->json(
-                [
-                    'id' => $id,
-                    'title' => $title,
-                    'quantity' => $quantity,
-                    'price' => $price,
-                    'response' => $response
-                ], 200);
-        } catch (\Exception $e) {
-            // Log the error silently
-            error_log("Order replication failed: " . $e->getMessage());
-        }
-    }
-
-    // PUT replication for updates
-    protected function sendUpdateReplication($id, $title, $quantity, $price)
-    {
-        $replicaUrl = 'http://localhost:9002/catalog2/replicate-update'; // Adjust according to your environment
+       $replicaUrl = "http://localhost:9002/catalog2/replicate-order"; // Adjust according to your environment
         
         try {
             $client = new \GuzzleHttp\Client();
@@ -152,30 +118,60 @@ public function order($id)
         }
     }
 
+    // PUT replication for updates
+    protected function sendUpdateReplication($id, $title, $quantity, $price)
+    {
+        $replicaUrl = "http://localhost:9002/catalog2/replicate-update"; // Adjust according to your environment
+        
+        try {
+            $client = new \GuzzleHttp\Client();
+            $response = $client->put($replicaUrl, [
+                'json' => [
+                    'id' => $id,
+                    'title' => $title,
+                    'quantity' => $quantity,
+                    'price' => $price
+                ],
+                'headers' => [
+                    'Replicated' => 'true' // Mark this as a replication request
+                ],
+            'timeout' => 5 
+            ]);
+
+               return  response()->json(
+                [
+                    'id' => $id,
+                    'title' => $title,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    
+                     'response' => json_decode($response->getBody(), true)
+                ], 200);
+        } catch (Exception $e) {
+            // Log the error silently
+            error_log("Update replication failed: " . $e->getMessage());
+        }
+    }
+
     public function replicateOrder(Request $request)
     {
 
-         return response()->json(['message' => 'entered the functions replicateOrder'], 200);
-
-        // Check if this is a replication request to prevent infinite loops
-        if ($request->header('Replicated') !== 'true') {
-            return response()->json(['message' => 'Already replicated, skip forwarding'], 200);
-        }
-
         try {
             $id = $request->input('id');
-            //$quantity = $request->input('quantity');
+           
+            $quantity = $request->input('quantity');
+          
 
             $pdo = new PDO('sqlite:database.db');
-            //$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            //$pdo->beginTransaction();
+            $pdo->beginTransaction();
 
-            // Update only the stock for order replication
-            $updateQuery = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = numItemsInStock - 1 WHERE id = ?");
-            $updateQuery->execute($id);
+            // Full update for update replication
+            $updateQuery = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
+            $updateQuery->execute([$quantity, $id]);
 
-            //$pdo->commit();
+            $pdo->commit();
 
             return response()->json(['message' => 'Order replication successful'], 200);
 
@@ -189,11 +185,6 @@ public function order($id)
 
     public function replicateUpdate(Request $request)
     {
-        // Check if this is a replication request to prevent infinite loops
-        if ($request->header('Replicated') !== 'true') {
-            return response()->json(['message' => 'Already replicated, skip forwarding'], 200);
-        }
-
         try {
             $id = $request->input('id');
             $title = $request->input('title');
@@ -201,7 +192,7 @@ public function order($id)
             $price = $request->input('price');
 
             $pdo = new PDO('sqlite:database.db');
-           // $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
            //$pdo->beginTransaction();
 
