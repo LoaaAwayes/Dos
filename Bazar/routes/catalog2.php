@@ -18,7 +18,7 @@ $router->get('/', function () use ($router) {
 });
 
 
-    $router->post('/replicate-order', 'Catalog2Controller@replicateOrder');
+    $router->put('/replicate-order', 'Catalog2Controller@replicateOrder');
     $router->put('/replicate-update', 'Catalog2Controller@replicateUpdate');
 
 $router->post('/order/{id}', 'Catalog2Controller@order');

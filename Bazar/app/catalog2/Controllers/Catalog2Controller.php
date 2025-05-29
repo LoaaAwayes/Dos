@@ -10,87 +10,87 @@ use Illuminate\Http\Request;
 
 class Catalog2Controller extends Controller
 {
-    public function order($id)
-    {
-        try {
-
-            $pdo = new PDO('sqlite:databaseCopy.db');
-            $pdo2 = new PDO("sqlite:database.db");
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $pdo2->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 
-            $pdo->beginTransaction();
-            $pdo2->beginTransaction();
+public function order($id)
+{
+    try {
+        $pdo = new PDO('sqlite:databaseCopy.db');
+        //$pdo2 = new PDO("sqlite:databaseCopy.db");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        //$pdo2->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            $query = $pdo->prepare("SELECT numItemsInStock, bookTitle, bookCost FROM bookCatalog WHERE id = ?");
-            $query->execute([$id]);
-            $book = $query->fetch(PDO::FETCH_ASSOC);
+        $pdo->beginTransaction();
+        //$pdo2->beginTransaction();
 
-            if (!$book) {
-                throw new Exception("Error: Item ID $id does not exist.");
-            }
+        // Get current stock from primary database
+        $query = $pdo->prepare("SELECT numItemsInStock, bookTitle, bookCost FROM bookCatalog WHERE id = ?");
+        $query->execute([$id]);
+        $book = $query->fetch(PDO::FETCH_ASSOC);
 
-            if ($book['numItemsInStock'] <= 0) {
-                throw new Exception("Purchase failed: Item ID $id is out of stock.");
-            }
-
-            $insertOrder = $pdo->prepare("INSERT INTO orders (bookId, quantity) VALUES (?, 1)");
-            $insertOrder->execute([$id]);
-
-            $updateStock = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = numItemsInStock - 1 WHERE id = ?");
-            $updateStock->execute([$id]);
-
-           
-
-           
-
-            $pdo->commit();
-
-            $selledBook = $pdo->prepare("SELECT * FROM bookCatalog WHERE id = ?");
-            $selledBook->execute([$id]);
-            $book = $selledBook->fetch(PDO::FETCH_ASSOC);
-
-             $updateStock2 = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
-            $updateStock2->execute([ $book['numItemsInStock'], $id]);
-
-             $selledBook2 = $pdo2->prepare("SELECT * FROM bookCatalog WHERE id = ?");
-            $selledBook2->execute([$id]);
-            $book2 = $selledBook2->fetch(PDO::FETCH_ASSOC);
-             $pdo2->commit();
-
-            // Only replicate if the request doesn't come from another replica
-            if (!request()->header('Replicated')) {
-                $replicaSent = $this->sendOrderReplication($id, $book['bookTitle'], $book['numItemsInStock'], $book['bookCost']);
-            }
-
-            return response()->json([
-                'message' => 'Order placed successfully. Happy reading!',
-                'book' => $book,
-                'book2'=> $book2,
-                'replicaMsg' => $replicaSent
-            ], 200);
-
-        } catch (PDOException $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
-        } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            return response()->json(['error' => $e->getMessage()], 400);
+        if (!$book) {
+            throw new Exception("Error: Item ID $id does not exist.");
         }
+
+        if ($book['numItemsInStock'] <= 0) {
+            throw new Exception("Purchase failed: Item ID $id is out of stock.");
+        }
+
+        // Process order in primary database
+        $insertOrder = $pdo->prepare("INSERT INTO orders (bookId, quantity) VALUES (?, 1)");
+        $insertOrder->execute([$id]);
+
+        $updateStock = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = numItemsInStock - 1 WHERE id = ?");
+        $updateStock->execute([$id]);
+
+        // Get updated stock from primary database
+        $selledBook = $pdo->prepare("SELECT * FROM bookCatalog WHERE id = ?");
+        $selledBook->execute([$id]);
+        $book = $selledBook->fetch(PDO::FETCH_ASSOC);
+
+        // Update secondary database with the new stock value
+        //$updateStock2 = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
+        //$updateStock2->execute([$book['numItemsInStock'], $id]); 
+
+        // Verify update in secondary database
+        /*$selledBook2 = $pdo2->prepare("SELECT * FROM bookCatalog WHERE id = ?");
+        $selledBook2->execute([$id]);
+        $book2 = $selledBook2->fetch(PDO::FETCH_ASSOC);*/
+
+        $pdo->commit();
+        //$pdo2->commit();
+
+        // Only replicate if the request doesn't come from another replica
+        if (!request()->header('Replicated')) {
+            $replicaSent = $this->sendOrderReplication($id, $book['bookTitle'], $book['numItemsInStock'], $book['bookCost']);
+        }
+
+        return response()->json([
+            'message' => 'Order placed successfully. Happy reading!',
+            'book' => $book,
+            //'book2' => $book2,
+            'replicaMsg' => $replicaSent 
+        ], 200);
+
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        if (isset($pdo2) && $pdo2->inTransaction()) $pdo2->rollBack();
+        return response()->json(['error' => 'Database error: ' . $e->getMessage()], 500);
+    } catch (Exception $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        if (isset($pdo2) && $pdo2->inTransaction()) $pdo2->rollBack();
+        return response()->json(['error' => $e->getMessage()], 400);
     }
+}
 
     // POST replication for orders
     protected function sendOrderReplication($id, $title, $quantity, $price)
     {
-
-        // return  response()->json('msg reached here sendOrderReplication');
-
-         $replicaUrl = 'http://localhost:9001/catalog/replicate-order';
-    
+       $replicaUrl = "http://localhost:9001/catalog/replicate-order"; // Adjust according to your environment
+        
         try {
             $client = new \GuzzleHttp\Client();
-            $response  = $client->post($replicaUrl, [
+            $response = $client->put($replicaUrl, [
                 'json' => [
                     'id' => $id,
                     'title' => $title,
@@ -99,32 +99,34 @@ class Catalog2Controller extends Controller
                 ],
                 'headers' => [
                     'Replicated' => 'true' // Mark this as a replication request
-                ]
+                ],
+            'timeout' => 5 
             ]);
 
-            return  response()->json(
+               return  response()->json(
                 [
                     'id' => $id,
                     'title' => $title,
                     'quantity' => $quantity,
                     'price' => $price,
-                    'response' => $response 
+                    
+                     'response' => json_decode($response->getBody(), true)
                 ], 200);
         } catch (\Exception $e) {
             // Log the error silently
-            error_log("Order replication failed: " . $e->getMessage());
+            error_log("Update replication failed: " . $e->getMessage());
         }
     }
 
     // PUT replication for updates
     protected function sendUpdateReplication($id, $title, $quantity, $price)
     {
-        $replicaUrl = 'http://localhost:9001/catalog/replicate-update'; // Adjust according to your environment
+        $replicaUrl = "http://localhost:9001/catalog/replicate-update"; 
         
         try {
             $client = new \GuzzleHttp\Client();
-            $response  = $client->put($replicaUrl, [
-                 [
+            $response = $client->put($replicaUrl, [
+                'json' => [
                     'id' => $id,
                     'title' => $title,
                     'quantity' => $quantity,
@@ -132,18 +134,20 @@ class Catalog2Controller extends Controller
                 ],
                 'headers' => [
                     'Replicated' => 'true' // Mark this as a replication request
-                ]
+                ],
+            'timeout' => 5 
             ]);
-            return  response()->json(
+
+               return  response()->json(
                 [
                     'id' => $id,
                     'title' => $title,
                     'quantity' => $quantity,
                     'price' => $price,
-                    'response' => json_decode($response->getBody(), true)
+                    
+                     'response' => json_decode($response->getBody(), true)
                 ], 200);
-
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log the error silently
             error_log("Update replication failed: " . $e->getMessage());
         }
@@ -151,26 +155,23 @@ class Catalog2Controller extends Controller
 
     public function replicateOrder(Request $request)
     {
-         return response()->json(['message' => 'entered the functions replicateOrder'], 200);
-        // Check if this is a replication request to prevent infinite loops
-        if ($request->header('Replicated') !== 'true') {
-            return response()->json(['message' => 'Already replicated, skip forwarding'], 200);
-        }
 
         try {
             $id = $request->input('id');
-            //$quantity = $request->input('quantity');
+           
+            $quantity = $request->input('quantity');
+          
 
             $pdo = new PDO('sqlite:databaseCopy.db');
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            //$pdo->beginTransaction();
+            $pdo->beginTransaction();
 
-            // Update only the stock for order replication
-            $updateQuery = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = numItemsInStock - 1 WHERE id = ?");
-            $updateQuery->execute($id);
+            // Full update for update replication
+            $updateQuery = $pdo->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
+            $updateQuery->execute([$quantity, $id]);
 
-            //$pdo->commit();
+            $pdo->commit();
 
             return response()->json(['message' => 'Order replication successful'], 200);
 
@@ -184,14 +185,6 @@ class Catalog2Controller extends Controller
 
     public function replicateUpdate(Request $request)
     {
-
-        return response()->json(['message' => 'entered the functions'], 200);
-
-        // Check if this is a replication request to prevent infinite loops
-        if ($request->header('Replicated') !== 'true') {
-            return response()->json(['message' => 'Already replicated, skip forwarding'], 200);
-        }
-
         try {
             $id = $request->input('id');
             $title = $request->input('title');
@@ -201,7 +194,7 @@ class Catalog2Controller extends Controller
             $pdo = new PDO('sqlite:databaseCopy.db');
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            //$pdo->beginTransaction();
+           //$pdo->beginTransaction();
 
             // Full update for update replication
             $updateQuery = $pdo->prepare("UPDATE bookCatalog SET bookTitle = ?, numItemsInStock = ?, bookCost = ? WHERE id = ?");
@@ -223,7 +216,7 @@ class Catalog2Controller extends Controller
     {
         try {
             $pdo = new PDO('sqlite:databaseCopy.db');
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            //$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             $existingItemQuery = $pdo->prepare("SELECT * FROM bookCatalog WHERE id = ?");
             $existingItemQuery->execute([$id]);
@@ -261,10 +254,10 @@ class Catalog2Controller extends Controller
 
             // Only replicate if the request doesn't come from another replica
             if (!request()->header('Replicated')) {
-             $replicaSent = $this->sendUpdateReplication($id, $title, $quantity, $price);
+                $replicaSent = $this->sendUpdateReplication($id, $title, $quantity, $price);
             }
 
-            return response()->json(['message' => 'Item updated successfully.', 'updated_item' => $updatedItem, 'replicaMsg' => $replicaSent], 200);
+            return response()->json(['message' => 'Item updated successfully.', 'updated_item' => $updatedItem ,'replica msg:'=>$replicaSent], 200);
 
         } catch (PDOException $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -277,7 +270,7 @@ class Catalog2Controller extends Controller
         try {
             
             $pdo = new PDO('sqlite:databaseCopy.db');
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
+            //$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
            // echo "Database file used: ".realpath('database.db');
            // die();
             
@@ -317,7 +310,7 @@ class Catalog2Controller extends Controller
         try {
            
             $pdo = new PDO('sqlite:databaseCopy.db');
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
+            //$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
 
 
 
