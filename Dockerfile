@@ -1,31 +1,27 @@
-FROM php:8.2.12-cli
+FROM php:8.2-cli
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libsqlite3-dev \
-    sqlite3 \
-    && docker-php-ext-install pdo pdo_sqlite
+# Install required dependencies
+RUN apt-get update && apt-get install -y unzip libzip-dev sqlite3 libsqlite3-dev
+RUN docker-php-ext-install pdo pdo_sqlite
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+#COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Set working directory
 WORKDIR /var/www
 
-# Copy application files
+# Copy source code
 COPY . .
 
-# Install dependencies
-RUN composer install
+# Make sure required folders exist before setting permissions
+RUN mkdir -p storage bootstrap/cache database/db
 
-# Create SQLite database directory
-RUN mkdir -p /var/www/database/db
+# Set permissions (only if directories exist)
+RUN chmod -R 777 storage bootstrap/cache database/db || true
 
-# Set permissions
-RUN chmod -R 777 /var/www/storage /var/www/bootstrap/cache /var/www/database/db
+# Install PHP dependencies
+#RUN composer install || true
 
-# Expose port
+# Expose port and start server
 EXPOSE 9000
-
-# Startup command
-CMD php artisan serve --host=0.0.0.0 --port=9000
+CMD ["php", "-S", "0.0.0.0:9000", "-t"]
