@@ -11,23 +11,25 @@ use Illuminate\Http\Request;
 class Catalog2Controller extends Controller
 {
 
-
+/*
+this function checks for book befor ordering 
+then when book exists it decreases its number in stock by one
+then call function to notify the replica 
+*/ 
 public function order($id)
 {
     try {
         $pdo = new PDO('sqlite:databaseCopy.db');
-        //$pdo2 = new PDO("sqlite:databaseCopy.db");
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        //$pdo2->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         $pdo->beginTransaction();
-        //$pdo2->beginTransaction();
 
         // Get current stock from primary database
         $query = $pdo->prepare("SELECT numItemsInStock, bookTitle, bookCost FROM bookCatalog WHERE id = ?");
         $query->execute([$id]);
         $book = $query->fetch(PDO::FETCH_ASSOC);
 
+        // check if book in stock
         if (!$book) {
             throw new Exception("Error: Item ID $id does not exist.");
         }
@@ -36,7 +38,7 @@ public function order($id)
             throw new Exception("Purchase failed: Item ID $id is out of stock.");
         }
 
-        // Process order in primary database
+        // Process order in database
         $insertOrder = $pdo->prepare("INSERT INTO orders (bookId, quantity) VALUES (?, 1)");
         $insertOrder->execute([$id]);
 
@@ -48,19 +50,11 @@ public function order($id)
         $selledBook->execute([$id]);
         $book = $selledBook->fetch(PDO::FETCH_ASSOC);
 
-        // Update secondary database with the new stock value
-        //$updateStock2 = $pdo2->prepare("UPDATE bookCatalog SET numItemsInStock = ? WHERE id = ?");
-        //$updateStock2->execute([$book['numItemsInStock'], $id]); 
 
-        // Verify update in secondary database
-        /*$selledBook2 = $pdo2->prepare("SELECT * FROM bookCatalog WHERE id = ?");
-        $selledBook2->execute([$id]);
-        $book2 = $selledBook2->fetch(PDO::FETCH_ASSOC);*/
 
         $pdo->commit();
-        //$pdo2->commit();
-
-        // Only replicate if the request doesn't come from another replica
+       
+        // Only replicate if the request doesn't come from another replica  this part is for testing
         if (!request()->header('Replicated')) {
             $replicaSent = $this->sendOrderReplication($id, $book['bookTitle'], $book['numItemsInStock'], $book['bookCost']);
         }
@@ -84,6 +78,10 @@ public function order($id)
 }
 
     // POST replication for orders
+
+    /* 
+    this function used in order function, to notify => send request to the replica to edit the stock quantity
+    */
     protected function sendOrderReplication($id, $title, $quantity, $price)
     {
        $replicaUrl = "http://localhost:9001/catalog/replicate-order"; // Adjust according to your environment
@@ -98,7 +96,7 @@ public function order($id)
                     'price' => $price
                 ],
                 'headers' => [
-                    'Replicated' => 'true' // Mark this as a replication request
+                    'Replicated' => 'true' // Mark this as a replication request// used for testing now not usefull
                 ],
             'timeout' => 5 
             ]);
@@ -118,7 +116,7 @@ public function order($id)
         }
     }
 
-    // PUT replication for updates
+    // PUT replication for updates  => notufy replica when update 
     protected function sendUpdateReplication($id, $title, $quantity, $price)
     {
         $replicaUrl = "http://localhost:9001/catalog/replicate-update"; 
@@ -152,7 +150,7 @@ public function order($id)
             error_log("Update replication failed: " . $e->getMessage());
         }
     }
-
+/* when totified by other server change current database to the coming data => when order item called */
     public function replicateOrder(Request $request)
     {
 
@@ -182,6 +180,7 @@ public function order($id)
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+/* when totified by other server change current database to the coming data => when update item called */
 
     public function replicateUpdate(Request $request)
     {
@@ -211,7 +210,7 @@ public function order($id)
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
+/* this method is for updating the item in stock => post request */
     public function updateItem($id)
     {
         try {
@@ -264,7 +263,7 @@ public function order($id)
         }
     }
 
- 
+/** search by topic function: url example:  http://localhost:9000/client/search/topic/undergraduate school */ 
     public function searchByTitle($title)
     {
         try {
@@ -304,7 +303,7 @@ public function order($id)
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
+/* get item details url: http://localhost:9000/client/item/3 */
     public function getItemDetails($id)
     {
         try {
