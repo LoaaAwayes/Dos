@@ -1,36 +1,97 @@
 
-version: '3.8'
 
 services:
-  order_service:
+  client_service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./client
+      dockerfile: ../Dockerfile
     volumes:
-      - ./order_service:/app
+      - ./client:/var/www
+      - client_db:/var/www/database/db
     ports:
-      - "8000:8000"
-    working_dir: /app
-    command: sh -c "composer install && php -S 0.0.0.0:8000 -t public"
+      - "9000:9000"
+    environment:
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/database/db/client.sqlite
 
   catalog_service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./catalog
+      dockerfile: ../Dockerfile
     volumes:
-      - ./catalog_service:/app
+      - ./catalog:/var/www
+      - catalog_db:/var/www/database/db
     ports:
-      - "8001:8000"
-    working_dir: /app
-    command: sh -c "composer install && php -S 0.0.0.0:8000 -t public"
+      - "9001:9000"
+    environment:
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/database/db/catalog.sqlite
 
-  client_service:
+  catalog2_service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./catalog2
+      dockerfile: ../Dockerfile
     volumes:
-      - ./client_service:/app
+      - ./catalog2:/var/www
+      - catalog2_db:/var/www/database/db
     ports:
-      - "8002:8000"
-    working_dir: /app
-    command: sh -c "composer install && php -S 0.0.0.0:8000 -t public"
+      - "9002:9000"
+    environment:
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/database/db/catalog2.sqlite
+
+  order_service:
+    build:
+      context: ./order
+      dockerfile: ../Dockerfile
+    volumes:
+      - ./order:/var/www
+      - order_db:/var/www/database/db
+    ports:
+      - "9003:9000"
+    environment:
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/database/db/order.sqlite
+
+  order2_service:
+    build:
+      context: ./order2
+      dockerfile: ../Dockerfile
+    volumes:
+      - ./order2:/var/www
+      - order2_db:/var/www/database/db
+    ports:
+      - "9004:9000"
+    environment:
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/database/db/order2.sqlite
+
+volumes:
+  client_db:
+  catalog_db:
+  catalog2_db:
+  order_db:
+  order2_db:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
