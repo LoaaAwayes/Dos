@@ -1,0 +1,36 @@
+
+version: '3.8'
+
+services:
+  order_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./order_service:/app
+    ports:
+      - "8000:8000"
+    working_dir: /app
+    command: sh -c "composer install && php -S 0.0.0.0:8000 -t public"
+
+  catalog_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./catalog_service:/app
+    ports:
+      - "8001:8000"
+    working_dir: /app
+    command: sh -c "composer install && php -S 0.0.0.0:8000 -t public"
+
+  client_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./client_service:/app
+    ports:
+      - "8002:8000"
+    working_dir: /app
+    command: sh -c "composer install && php -S 0.0.0.0:8000 -t public"
